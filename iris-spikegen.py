@@ -4,6 +4,8 @@ from matplotlib import pyplot as plt
 
 from sklearn import datasets
 from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import MinMaxScaler
+from snntorch import spikegen
 
 from torch import nn
 import snntorch.spikeplot as splt
@@ -14,12 +16,27 @@ TRAINING_CUTOFF = 1
 dtype = torch.float32
 device = 'cpu'
 
+scaler = MinMaxScaler()
+
 iris = datasets.load_iris()
+# X = scaler.fit_transform(iris.data)
 X = iris.data
 y = iris.target
 
+X_tensored = torch.tensor(X, dtype=torch.float32)
+
+### Spikes
+# X_spiked = spikegen.rate(X_tensored, num_steps=1)
+# X_spiked = spikegen.rate_conv(X_tensored)
+X_spiked = spikegen.rate_interpolate(X_tensored, num_steps=1)
+
+# X_spiked = spikegen.latency(X_tensored, num_steps=1)
+# X_spiked = spikegen.delta(X_tensored, threshold=1)
+### End spikes
+
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2,
                                                     random_state=0)
+
 input_nodes = 4  # Sepal length, sepal width, petal length, petal width
 hidden_neurons = 500  # Arbitrary number of hidden layer neurons
 output_neurons = 3  # Setosa, Virginica, Versicolor
@@ -94,15 +111,15 @@ def train_classifier(classifier, loss_function, optimizer, inputs, actuals):
         loss_history.append(current_loss_value)
         print(f'Current loss: {current_loss_value}')
 
-        if epoch % 25 == 0:
-            fig = plt.figure(facecolor="w", figsize=(10, 5))
-            ax = fig.add_subplot(111)
-            #  s: size of scatter points; c: color of scatter points
-            splt.raster(spikes, ax, s=1.5, c="black")
-            plt.title("Input Layer")
-            plt.xlabel("Time step")
-            plt.ylabel("Neuron Number")
-            plt.show()
+        # if epoch % 25 == 0:
+        #     fig = plt.figure(facecolor="w", figsize=(10, 5))
+        #     ax = fig.add_subplot(111)
+        #     #  s: size of scatter points; c: color of scatter points
+        #     splt.raster(spikes, ax, s=1.5, c="black")
+        #     plt.title("Input Layer")
+        #     plt.xlabel("Time step")
+        #     plt.ylabel("Neuron Number")
+        #     plt.show()
 
         if CUT_TRAINING_SHORT and current_loss_value < TRAINING_CUTOFF:
             break
@@ -137,13 +154,13 @@ training_loss_history = train_classifier(classifier, loss_function, optimizer,
                                          X_train, y_train)
 correct_guesses, total_guesses = test_classifier(classifier, X_test, y_test)
 
-fig = plt.figure(facecolor="w", figsize=(10, 5))
-plt.plot(training_loss_history)
-plt.title("Loss Curve")
-plt.legend(["Train Loss"])
-plt.xlabel("Iteration")
-plt.ylabel("Loss")
-plt.show()
+# fig = plt.figure(facecolor="w", figsize=(10, 5))
+# plt.plot(training_loss_history)
+# plt.title("Loss Curve")
+# plt.legend(["Train Loss"])
+# plt.xlabel("Iteration")
+# plt.ylabel("Loss")1
+# plt.show()
 
 print("------")
 print(f"Testing state: {correct_guesses}/{total_guesses}")
